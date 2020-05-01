@@ -60,27 +60,39 @@ def get_timings(beat, max_length):
     return timings
 
 
-def gen_melody(scale, timings):
+def gen_melody(scale, timings, note_deviance):
     """A function to build a monophonic melody
 
     Args:
         - scale (list of int): list of 'allowable' notes
         - timings (list of int): list of knote durations
+        - note_deviance (float): the probability that a note is altered by a
+            half-step.
 
     Returns:
-        - melody (tuple of lists): (notes, timing)
+        - melody (list of ints): the notes, in order, of the melody
     """
     melody = [random.sample(scale, 1)[0] for i in range(len(timings))]
-    return zip(melody, timings)
+
+    px = np.random.rand(len(timings))
+    idx = np.argwhere(px<=note_deviance)
+    direction = [-1, 1]
+    for i in idx:
+        melody[i[0]] = melody[i[0]] + random.sample(direction, 1)[0]
+    return melody
 
 
-def build_melody(scale, beat, max_length, velocity, save_path):
+def build_melody(scale, voices, note_deviance, beat, max_length, velocity,
+                 save_path):
     """A function to create a single track midi object.
 
     Default is 120bpm.
 
     Args:
         - scale (list): list of 'allowable' notes
+        - voices (int): how many voices in the midi track?
+        - note_deviance (float): the probability that a note is altered by a
+            half-step
         - beat (int): beat length value of a 'quarter note' at 120bpm,
             480 represents a 'regular' quarter note.
         - max_length (int): the maximum number of 'beats' as defined above of
@@ -93,10 +105,10 @@ def build_melody(scale, beat, max_length, velocity, save_path):
     mid.tracks.append(track)
 
     timings = get_timings(beat, max_length)
-    melody = gen_melody(scale, timings)
+    melody = gen_melody(scale, timings, note_deviance)
 
     t = 0
-    for note, timing in melody:
+    for note, timing in zip(melody, timings):
         track.append(Message('note_on', note=note, velocity=velocity, time=t))
         track.append(Message('note_off', note=note, velocity=velocity, time=t+timing))
         t = timing
@@ -109,7 +121,6 @@ if __name__ == "__main__":
 
     """
     TODO:
-        - add probability of note deviance from the scale
         - add more scales
         - make timing more advanced
         - add multiple voices (up to three)
@@ -126,6 +137,12 @@ if __name__ == "__main__":
                         help="The number of octaves of the scale used to generate\
                         the melody. Octaves start at the default key center\
                         at the root specified by the `octave` parameter.")
+    parser.add_argument("-voices", nargs='?', default=1,
+                        help="The number of voices in the output files.")
+    parser.add_argument("-note_dev", nargs='?', default=0,
+                        help="The probability [0, 1] that a note is altered by\
+                        one half-step. The probability is for EACH NOTE in the\
+                        chord or melody.")
     parser.add_argument("-beat", nargs='?', default=480,
                         help="Beat length value of a 'quarter note' at 120bpm,\
                             480 represents a 'regular' quarter note.")
@@ -139,6 +156,9 @@ if __name__ == "__main__":
     parser.add_argument("-output", nargs='?', default='output/',
                         help="Output path. Defaults to `output/`. Path is\
                         relative to execution.")
+    parser.add_argument("-chord_mode", nargs='?', default=False,
+                        help="Should the output be chord changes? Note, timings\
+                        are uniform at the `beat` parameter in chord mode.")
 
     args = parser.parse_args()
 
@@ -157,12 +177,16 @@ if __name__ == "__main__":
     OCTAVE_RANGE = int(args.oct_range)
     KEY_ARG = str(args.key).upper()
     KEY = BASE_NOTE[KEY_ARG]
+    VOICES = int(args.voices)
     BEAT = int(args.beat)
     MAX_LENGTH = int(args.max_length)
+    NOTE_DEVIANCE = float(args.note_dev)
     VELOCITY = int(args.vel)
     SCALE_ARG = str(args.scale).lower()
-    N_MELODIES = int(args.n)
+    N = int(args.n)
+    CHORD_MODE = args.chord_mode
     OUTPUT_PATH = args.output
+
 
     SCALE = [(OCTAVE*12 + note) for note in get_scale(scale=SCALE_ARG, key=KEY)]
 
@@ -173,14 +197,21 @@ if __name__ == "__main__":
             SCALE += [(12*oct)+note for note in SCALE[:-1]]
 
     print("INPUT PARAMETERS:")
-    print(f'Key: "{KEY_ARG}"')
-    print(f'Scale: "{SCALE_ARG}"')
-    print(f'Octave: "{OCTAVE}"')
-    print(f'Octave Range: "{OCTAVE_RANGE}"')
-    print(f'Notes: "{SCALE}"')
+    print(f'Key: {KEY_ARG}')
+    print(f'Scale: {SCALE_ARG}')
+    print(f'Octave: {OCTAVE}')
+    print(f'Octave Range: {OCTAVE_RANGE}')
+    print(f'Velocity: {VELOCITY}')
+    print(f'Beat: {BEAT}')
+    print(f'Maximum Phrase Length: {MAX_LENGTH}')
+    print(f'Note Deviance: {NOTE_DEVIANCE}')
+    print(f'Voices: {VOICES}')
+    print(f'Chord Mode: {CHORD_MODE}')
+    print(f'Notes: {SCALE}')
 
-    for i in range(N_MELODIES):
+
+    for i in range(N):
         save_path = f'{OUTPUT_PATH}{KEY_ARG}_{SCALE_ARG}_{i}.mid'
-        build_melody(scale=SCALE,beat=BEAT,max_length=MAX_LENGTH,
-                    velocity=VELOCITY,
+        build_melody(scale=SCALE,voices=VOICES, note_deviance=NOTE_DEVIANCE,
+                    beat=BEAT,max_length=MAX_LENGTH,velocity=VELOCITY,
                     save_path=save_path)
