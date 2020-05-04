@@ -2,6 +2,7 @@ import argparse
 from mido import Message, MidiFile, MidiTrack
 import numpy as np
 import random
+from distutils.util import strtobool
 
 
 """
@@ -34,13 +35,28 @@ def get_scale(scale='major', key=60):
         'lydian':[2,2,2,1,2,2,1],
         'mixolydian':[2,2,1,2,2,1,2],
         'aeolian':[2,1,2,2,1,2,2],
-        'locrian':[1,2,2,1,2,2,2]
+        'locrian':[1,2,2,1,2,2,2],
+        'minor_pent':[3,2,2,3,2],
+        'major_pent':[2,2,3,2,3],
+        'pent_6':[2,2,3,1,3],
+        'pent_2':[1,3,3,2,3],
+        'pent_3':[2,1,4,2,3],
+        'pent_5':[2,2,2,3,3],
+        'mixo_pent':[2,2,3,3,2],
+        'phryg_pent':[1,2,3,1,3],
+        'dim_pent':[2,1,3,1,3],
+        'blues':[3,2,1,1,3,2],
+        'harmonic_minor':[2,1,2,2,1,3,2],
+        'melodic_mimnor':[2,1,2,2,1,3,2],
+        'whole_tone':[2,2,2,2,2,2],
+        'whole_half':[2,1,2,1,2,1,2,1],
+        'half_whole':[1,2,1,2,1,2,1,2]
     }
     notes = [key] + [(key + i) for i in np.cumsum(SCALE_DICT[scale])]
     return notes
 
 
-def get_timings(beat, max_length):
+def get_timings(beat, max_length, rand_beat):
     """A function to return a list of note timings.
 
     Args:
@@ -48,24 +64,28 @@ def get_timings(beat, max_length):
             480 represents a 'regular' quarter note
         - max_length (int): the maximum number of 'beats' as defined above of
             the entire phrase. phrase may be shorter.
+        - rand_beat (bool): should the beats be randon (True), or uniform
+            (False)?
 
     Returns:
         - timings (list): a list of note durations
     """
-    BEAT_DICT = {
-        'sixteenth':int(beat/4),
-        'eighth':int(beat/2),
-        'quarter':int(beat),
-        'half':int(beat*2),
-        'whole':int(beat*4)
-    }
-    total_steps = beat*max_length
-    timings = []
-    while total_steps > 0:
-        b = random.sample(list(BEAT_DICT), 1)
-        duration = BEAT_DICT[b[0]]
-        total_steps -= duration
-        timings.append(duration)
+    BEATS = [int(beat/4),
+             int(beat/2),
+             int(beat),
+             int(beat*2),
+             int(beat*4)]
+
+    total_steps = beat * max_length
+    timings = [beat] * max_length
+
+    if rand_beat == True:
+        timings = []
+        while total_steps > 0:
+            duration = random.sample(BEATS, 1)[0]
+            total_steps -= duration
+            timings.append(duration)
+
     return timings
 
 
@@ -84,15 +104,15 @@ def gen_melody(scale, timings, note_deviance):
     melody = [random.sample(scale, 1)[0] for i in range(len(timings))]
 
     px = np.random.rand(len(timings))
-    idx = np.argwhere(px<=note_deviance)
+    idx = np.argwhere(px <= note_deviance)
     direction = [-1, 1]
     for i in idx:
         melody[i[0]] = melody[i[0]] + random.sample(direction, 1)[0]
     return melody
 
 
-def build_melody(scale, tracks, note_deviance, beat, max_length, velocity,
-                 save_path):
+def build_melody(scale, tracks, note_deviance, beat, max_length, rand_beat,
+                 velocity,rests, save_path):
     """A function to create a single track midi object.
 
     Default is 120bpm.
@@ -106,21 +126,38 @@ def build_melody(scale, tracks, note_deviance, beat, max_length, velocity,
             480 represents a 'regular' quarter note.
         - max_length (int): the maximum number of 'beats' as defined above of
             the entire phrase. phrase may be shorter.
+        - rand_beat (bool): should the beats be randon (True), or uniform
+            (False)?
         - velocity (int): velocity of the midi notes
+        - rests (bool): if true output will contain random offsets in note
+            start position
         - save_path (str): what to name the file
     """
-    mid = MidiFile(type=1) # (synchronous): all tracks start at the same time
+    # (synchronous): all tracks start at the same time
+    mid = MidiFile(type=1)
 
 
     for v in range(tracks):
         track = MidiTrack()
         mid.tracks.append(track)
-        timings = get_timings(beat, max_length)
+        timings = get_timings(beat, max_length, rand_beat)
         melody = gen_melody(scale, timings, note_deviance)
 
-        for note, timing in zip(melody, timings):
-            track.append(Message('note_on', note=note, velocity=velocity, time=1))
-            track.append(Message('note_off', note=note, velocity=velocity, time=timing+1))
+        if rests == True:
+            t = 0
+            for note, timing in zip(melody, timings):
+                track.append(Message('note_on', note=note,
+                                     velocity=velocity, time=t))
+                track.append(Message('note_off', note=note,
+                                     velocity=velocity, time=timing+t))
+
+                t += timing
+        else:
+            for note, timing in zip(melody, timings):
+                track.append(Message('note_on', note=note,
+                                     velocity=velocity, time=1))
+                track.append(Message('note_off', note=note,
+                                     velocity=velocity, time=timing+1))
     mid.save(save_path)
 
 
@@ -152,6 +189,9 @@ if __name__ == "__main__":
     parser.add_argument("-max_length", nargs='?', default=16,
                         help="The maximum number of 'beats' from the `beat`\
                         parameter of the entire phrase. Phrase may be shorter.")
+    parser.add_argument("-rand_beat", nargs='?', default=True,
+                        help="Should the beats be random (True), or should they\
+                        be constant (False)?")
     parser.add_argument("-vel", nargs='?', default=100,
                         help="Velocity of the notes.")
     parser.add_argument("-key", nargs='?', default='C',
@@ -159,9 +199,8 @@ if __name__ == "__main__":
     parser.add_argument("-output", nargs='?', default='output/',
                         help="Output path. Defaults to `output/`. Path is\
                         relative to execution.")
-    parser.add_argument("-chord_mode", nargs='?', default=False,
-                        help="Should the output be chord changes? Note, timings\
-                        are uniform at the `beat` parameter in chord mode.")
+    parser.add_argument("-rests", nargs='?', default=False,
+                        help="Should the output contain random rests?")
 
     args = parser.parse_args()
 
@@ -187,7 +226,8 @@ if __name__ == "__main__":
     VELOCITY = int(args.vel)
     SCALE_ARG = str(args.scale).lower()
     N = int(args.n)
-    CHORD_MODE = args.chord_mode
+    RESTS = args.rests
+    RAND_BEAT = args.rand_beat
     OUTPUT_PATH = args.output
 
 
@@ -208,13 +248,14 @@ if __name__ == "__main__":
     print(f'Beat: {BEAT}')
     print(f'Maximum Phrase Length: {MAX_LENGTH}')
     print(f'Note Deviance: {NOTE_DEVIANCE}')
+    print(f'Random Beats: {RAND_BEAT}')
     print(f'Tracks: {TRACKS}')
-    print(f'Chord Mode: {CHORD_MODE}')
+    print(f'Rests Enabled: {RESTS}')
     print(f'Notes: {SCALE}')
 
 
     for i in range(N):
         save_path = f'{OUTPUT_PATH}{KEY_ARG}_{SCALE_ARG}_{i}.mid'
         build_melody(scale=SCALE,tracks=TRACKS, note_deviance=NOTE_DEVIANCE,
-                    beat=BEAT,max_length=MAX_LENGTH,velocity=VELOCITY,
-                    save_path=save_path)
+                    beat=BEAT,max_length=MAX_LENGTH, rand_beat=RAND_BEAT,
+                    velocity=VELOCITY,rests=RESTS,save_path=save_path)
