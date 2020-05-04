@@ -136,7 +136,6 @@ def build_melody(scale, tracks, note_deviance, beat, max_length, rand_beat,
     # (synchronous): all tracks start at the same time
     mid = MidiFile(type=1)
 
-
     for v in range(tracks):
         track = MidiTrack()
         mid.tracks.append(track)
