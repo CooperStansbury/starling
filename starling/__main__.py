@@ -50,7 +50,8 @@ def get_scale(scale='major', key=60):
         'melodic_mimnor':[2,1,2,2,1,3,2],
         'whole_tone':[2,2,2,2,2,2],
         'whole_half':[2,1,2,1,2,1,2,1],
-        'half_whole':[1,2,1,2,1,2,1,2]
+        'half_whole':[1,2,1,2,1,2,1,2],
+        'lydian_flat7':[2,2,2,1,2,1,2]
     }
     notes = [key] + [(key + i) for i in np.cumsum(SCALE_DICT[scale])]
     return notes
