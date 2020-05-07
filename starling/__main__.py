@@ -5,15 +5,6 @@ import random
 from distutils.util import strtobool
 
 
-"""
-TODO:
-    - chord mode
-    - rest p(x)
-    - add more scales
-    - make timing more advanced
-"""
-
-
 def get_scale(scale='major', key=60):
     """A function to return an octave run of the major scale starting at
     C3 (note = 60).
