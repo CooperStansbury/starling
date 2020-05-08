@@ -146,9 +146,9 @@ def build_melody(scale, tracks, note_deviance, beat, max_length, rand_beat,
         else:
             for note, timing in zip(melody, timings):
                 track.append(Message('note_on', note=note,
-                                     velocity=velocity, time=1))
+                                     velocity=velocity, time=0))
                 track.append(Message('note_off', note=note,
-                                     velocity=velocity, time=timing+1))
+                                     velocity=velocity, time=timing+0))
     mid.save(save_path)
 
 
