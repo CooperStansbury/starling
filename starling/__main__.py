@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     if args.show_scales:
         print("Available Scales:")
-        [print(f"\t{sc}") for sc in get_keys().keys()]
+        print(list(get_keys().keys()))
 
     SCALE = [(OCTAVE*12 + note) for note in get_scale(scale=SCALE_ARG, key=KEY)]
 
