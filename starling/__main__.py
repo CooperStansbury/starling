@@ -5,6 +5,44 @@ import random
 from distutils.util import strtobool
 
 
+def get_keys():
+    """A function to return the avilable scales.
+    
+    Returns:
+        - scale_dict (dict): dictionary of currently available scales.
+    """
+    SCALE_DICT = {
+    'major': [2,2,1,2,2,2,1],
+    'minor':[2,1,2,2,1,2,2],
+    'chrom':[1,1,1,1,1,1,1,1,1,1,1,1],
+    'ionanian':[2,2,1,2,2,2,1],
+    'dorian':[2,1,2,2,2,1,2],
+    'phrygian':[1,2,2,2,1,2,2],
+    'lydian':[2,2,2,1,2,2,1],
+    'mixolydian':[2,2,1,2,2,1,2],
+    'aeolian':[2,1,2,2,1,2,2],
+    'locrian':[1,2,2,1,2,2,2],
+    'minor_pent':[3,2,2,3,2],
+    'major_pent':[2,2,3,2,3],
+    'pent_6':[2,2,3,1,3],
+    'pent_2':[1,3,3,2,3],
+    'pent_3':[2,1,4,2,3],
+    'pent_5':[2,2,2,3,3],
+    'mixo_pent':[2,2,3,3,2],
+    'phryg_pent':[1,2,3,1,3],
+    'dim_pent':[2,1,3,1,3],
+    'blues':[3,2,1,1,3,2],
+    'harmonic_minor':[2,1,2,2,1,3,2],
+    'melodic_mimnor':[2,1,2,2,1,3,2],
+    'whole_tone':[2,2,2,2,2,2],
+    'whole_half':[2,1,2,1,2,1,2,1],
+    'half_whole':[1,2,1,2,1,2,1,2],
+    'lydian_flat7':[2,2,2,1,2,1,2]
+    }
+
+    return SCALE_DICT
+    
+
 def get_scale(scale='major', key=60):
     """A function to return an octave run of the major scale starting at
     C3 (note = 60).
@@ -16,34 +54,7 @@ def get_scale(scale='major', key=60):
     Returns:
         - notes (list of int): list of note values
     """
-    SCALE_DICT = {
-        'major': [2,2,1,2,2,2,1],
-        'minor':[2,1,2,2,1,2,2],
-        'chrom':[1,1,1,1,1,1,1,1,1,1,1,1],
-        'ionanian':[2,2,1,2,2,2,1],
-        'dorian':[2,1,2,2,2,1,2],
-        'phrygian':[1,2,2,2,1,2,2],
-        'lydian':[2,2,2,1,2,2,1],
-        'mixolydian':[2,2,1,2,2,1,2],
-        'aeolian':[2,1,2,2,1,2,2],
-        'locrian':[1,2,2,1,2,2,2],
-        'minor_pent':[3,2,2,3,2],
-        'major_pent':[2,2,3,2,3],
-        'pent_6':[2,2,3,1,3],
-        'pent_2':[1,3,3,2,3],
-        'pent_3':[2,1,4,2,3],
-        'pent_5':[2,2,2,3,3],
-        'mixo_pent':[2,2,3,3,2],
-        'phryg_pent':[1,2,3,1,3],
-        'dim_pent':[2,1,3,1,3],
-        'blues':[3,2,1,1,3,2],
-        'harmonic_minor':[2,1,2,2,1,3,2],
-        'melodic_mimnor':[2,1,2,2,1,3,2],
-        'whole_tone':[2,2,2,2,2,2],
-        'whole_half':[2,1,2,1,2,1,2,1],
-        'half_whole':[1,2,1,2,1,2,1,2],
-        'lydian_flat7':[2,2,2,1,2,1,2]
-    }
+    SCALE_DICT = get_keys()
     notes = [key] + [(key + i) for i in np.cumsum(SCALE_DICT[scale])]
     return notes
 
@@ -187,6 +198,8 @@ if __name__ == "__main__":
                         help="Velocity of the notes.")
     parser.add_argument("-key", nargs='?', default='C',
                         help="Key to produce melodies in.")
+    parser.add_argument("-show_scales", nargs='?', default=True,
+                        help="Print a list of available scales?")
     parser.add_argument("-output", nargs='?', default='output/',
                         help="Output path. Defaults to `output/`. Path is\
                         relative to execution.")
@@ -221,6 +234,9 @@ if __name__ == "__main__":
     RAND_BEAT = args.rand_beat
     OUTPUT_PATH = args.output
 
+    if args.show_scales:
+        print("Available Scales:")
+        [print(f"\t{sc}") for sc in get_keys().keys()]
 
     SCALE = [(OCTAVE*12 + note) for note in get_scale(scale=SCALE_ARG, key=KEY)]
 
